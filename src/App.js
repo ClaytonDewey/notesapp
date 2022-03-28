@@ -6,11 +6,9 @@ import { List, Input, Button } from "antd";
 import { v4 as uuid } from "uuid";
 import "antd/dist/antd.css";
 import { listNotes } from "./graphql/queries";
-import {
-    createNote as CreateNote
-    , deleteNote as DeleteNote
-    , updateNote as UpdateNote
-} from "./graphql/mutations";
+import { createNote as CreateNote, deleteNote as DeleteNote, updateNote as UpdateNote } from "./graphql/mutations";
+import { onCreateNote } from "./graphql/subscriptions";
+
 const CLIENT_ID = uuid();
 
 const initialState = {
@@ -81,6 +79,24 @@ const App = () => {
 
     useEffect(() => {
         fetchNotes();
+
+        const subscription = API.graphql({
+            query: onCreateNote,
+        }).subscribe({
+            next: (noteData) => {
+                console.log(noteData);
+                const note = noteData.value.data.onCreateNote;
+
+                if (CLIENT_ID === note.clientId) return;
+                dispatch({
+                    type: "ADD_NOTE",
+                    note: note,
+                });
+            },
+        });
+
+        // Pass a clean-up function to React
+        return () => subscription.unsubscribe();
     }, []);
 
     const createNote = async () => {
@@ -117,60 +133,52 @@ const App = () => {
     };
 
     const deleteNote = async (noteToDelete) => {
-
         // Optimistically update state and screen
         dispatch({
-            type: "SET_NOTES"
-            , notes: state.notes.filter(x => x !== noteToDelete)
+            type: "SET_NOTES",
+            notes: state.notes.filter((x) => x !== noteToDelete),
         });
 
         // Then do the delete via GraphQL mutation.
         try {
             await API.graphql({
-                query: DeleteNote
-                , variables: {
+                query: DeleteNote,
+                variables: {
                     input: {
-                        id: noteToDelete.id
-                    }
-                }
+                        id: noteToDelete.id,
+                    },
+                },
             });
-        }
-
-        catch (err) {
+        } catch (err) {
             console.error({ err });
         }
-
-    }
+    };
 
     const updateNote = async (noteToUpdate) => {
-
         // Update the state and display optimistically.
         dispatch({
-            type: "SET_NOTES"
-            , notes: state.notes.map(x => ({
-                ...x
-                , completed: x === noteToUpdate ? !x.completed : x.completed
-            }))
+            type: "SET_NOTES",
+            notes: state.notes.map((x) => ({
+                ...x,
+                completed: x === noteToUpdate ? !x.completed : x.completed,
+            })),
         });
 
         // Then call the backend.
         try {
             await API.graphql({
-                query: UpdateNote
-                , variables: {
+                query: UpdateNote,
+                variables: {
                     input: {
-                        id: noteToUpdate.id
-                        , completed: !noteToUpdate.completed
-                    }
-                }
-            })
-        }
-
-        catch (err) {
+                        id: noteToUpdate.id,
+                        completed: !noteToUpdate.completed,
+                    },
+                },
+            });
+        } catch (err) {
             console.error({ err });
         }
-
-    }
+    };
 
     const onChange = (e) => {
         dispatch({
@@ -185,19 +193,19 @@ const App = () => {
             <List.Item
                 style={styles.item}
                 actions={[
-                    <p
-                        style={styles.p}
-                        onClick={() => deleteNote(item)}
-                    > Delete</p>
-                    , <p
-                        style={styles.p}
-                        onClick={() => updateNote(item)}
-                    >
+                    <p style={styles.p} onClick={() => deleteNote(item)}>
+                        {" "}
+                        Delete
+                    </p>,
+                    <p style={styles.p} onClick={() => updateNote(item)}>
                         {item.completed ? "Mark incomplete" : "Mark complete"}
-                    </p>
+                    </p>,
                 ]}
             >
-                <List.Item.Meta title={`${item.name}${item.completed ? " (completed)" : ""}`} description={item.description} />
+                <List.Item.Meta
+                    title={`${item.name}${item.completed ? " (completed)" : ""}`}
+                    description={item.description}
+                />
             </List.Item>
         );
     }
