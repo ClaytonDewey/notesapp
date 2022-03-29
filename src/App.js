@@ -52,6 +52,15 @@ const reducer = (state, action) => {
                 form: { ...state.form, [action.name]: action.value },
             };
 
+        case "ADD_EXCLAMATION":
+            return {
+                ...state,
+                notes: state.notes.map((x) => ({
+                    ...x,
+                    name: x === action.item ? `${x.name}!` : x.name,
+                })),
+            };
+
         default:
             return {
                 ...state,
@@ -179,6 +188,13 @@ const App = () => {
         }
     };
 
+    const addExclamation = (item) => {
+        dispatch({
+            type: "ADD_EXCLAMATION",
+            item: item,
+        });
+    };
+
     const onChange = (e) => {
         dispatch({
             type: "SET_INPUT",
@@ -198,6 +214,9 @@ const App = () => {
                     </p>,
                     <p style={styles.p} onClick={() => updateNote(item)}>
                         {item.completed ? "Mark incomplete" : "Mark complete"}
+                    </p>,
+                    <p style={styles.p} onClick={() => addExclamation(item)}>
+                        + !
                     </p>,
                 ]}
             >
