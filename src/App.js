@@ -67,6 +67,7 @@ const App = () => {
             const notesData = await API.graphql({
                 query: listNotes,
             });
+
             dispatch({
                 type: "SET_NOTES",
                 notes: notesData.data.listNotes.items,
@@ -84,7 +85,6 @@ const App = () => {
             query: onCreateNote,
         }).subscribe({
             next: (noteData) => {
-                console.log(noteData);
                 const note = noteData.value.data.onCreateNote;
 
                 if (CLIENT_ID === note.clientId) return;
@@ -126,7 +126,6 @@ const App = () => {
                 query: CreateNote,
                 variables: { input: note },
             });
-            console.log("successfully created note!");
         } catch (err) {
             console.error("error: ", err);
         }
@@ -229,6 +228,11 @@ const App = () => {
             <Button onClick={createNote} type="primary">
                 Create Note
             </Button>
+            <hr />
+            <h4>
+                {state.notes.filter((x) => x.completed).length} completed / {state.notes.length} total
+            </h4>
+            <hr />
             <List loading={state.loading} dataSource={state.notes} renderItem={renderItem} />
         </div>
     );
